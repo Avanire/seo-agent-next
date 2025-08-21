@@ -5,10 +5,10 @@ import {Keyword} from '@prisma/client'
 import {Agent} from 'node:https'
 
 const config = {
-    OUR_DOMAINS: ['interest-mebel.ru']
+    OUR_DOMAIN: process.env.OUR_DOMAIN || 'localhost',
 }
 
-
+// TODO: Переписать интерфейс для searchResults и keyword?
 interface MonitoringState {
     keyword: Keyword | null
     searchResults: any[]
@@ -28,17 +28,17 @@ const httpsAgent = new Agent({
 })
 
 const gigachat = new GigaChat({
-    accessToken: process.env.GIGACHAT_ACCESS_TOKEN,
+    credentials: process.env.GIGACHAT_ACCESS_TOKEN,
     model: 'GigaChat-2',
     httpsAgent,
     temperature: 0.3,
 })
 
 // Функция для поиска нашего сайта
-const findOurPosition = (results: any[], ourDomains: string[]): number => {
+const findOurPosition = (results: any[], ourDomain: string): number => {
     for (let i = 0; i < results.length; i++) {
         const url = results[i].url
-        if (ourDomains.some((domain) => url.includes(domain))) {
+        if (url.includes(ourDomain)) {
             return i + 1
         }
     }
@@ -91,15 +91,16 @@ const workflow = new StateGraph<typeof stateDefinition>({
         }
     })
     .addNode('analyze_position', async (state: MonitoringState) => {
+        const searchResults = state.searchResults!.results
         if (state.error) return {error: state.error}
-        if (!state.searchResults || state.searchResults.length === 0) {
+        if (!searchResults || searchResults.length === 0) {
             return {error: 'No search results'}
         }
 
         try {
             const ourPosition = findOurPosition(
-                state.searchResults,
-                config.OUR_DOMAINS
+                searchResults,
+                config.OUR_DOMAIN
             )
             return {ourPosition}
         } catch (error) {
@@ -123,12 +124,12 @@ const workflow = new StateGraph<typeof stateDefinition>({
                     : 'не в топ-20'
 
             const prompt = `
-        Ты SEO-специалист. Проанализируй позицию сайта ${config.OUR_DOMAINS[0]} 
+        Ты SEO-специалист. Проанализируй позицию сайта ${config.OUR_DOMAIN} 
         по ключевому слову: "${state.keyword!.value}".
         
         Текущая позиция: ${positionText}
         Топ-5 результатов:
-        ${state.searchResults
+        ${state.searchResults!.results
                 .slice(0, 5)
                 .map((r, i) => `${i + 1}. ${r.title} (${r.url})`)
                 .join('\n')}
@@ -140,16 +141,24 @@ const workflow = new StateGraph<typeof stateDefinition>({
             const response = await gigachat.invoke(prompt)
             return {analysis: response.text.toString()}
         } catch (error) {
+            let errorMessage = 'Unknown error'
+
+            if (error instanceof Error) {
+                errorMessage = error.message
+            } else if (typeof error === 'object' && error !== null) {
+                errorMessage = JSON.stringify(error, null, 2)
+            }
+
             return {
-                error: `GigaChat failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                error: `GigaChat failed: ${errorMessage}`
             }
         }
     })
     .addNode('save_results', async (state: MonitoringState) => {
-        // if (state.error) {
-        //     console.error(`[${state.keyword!.value}] Error: ${state.error}`)
-        //     return {}
-        // }
+        if (state.error) {
+            console.error(`[${state.keyword!.value}] Error: ${state.error}`)
+            return {}
+        }
 
         // try {
         //     const positions: Position[] = state.searchResults.map(
@@ -162,7 +171,7 @@ const workflow = new StateGraph<typeof stateDefinition>({
         //             ),
         //         })
         //     )
-
+        //
         // await prisma.searchResult.create({
         //     data: {
         //         keywordId: state.keyword!.id,
@@ -172,7 +181,7 @@ const workflow = new StateGraph<typeof stateDefinition>({
         //         analysis: state.analysis || '',
         //     },
         // })
-
+        //
         //     return {}
         // } catch (error) {
         //     return {
@@ -190,5 +199,5 @@ const workflow = new StateGraph<typeof stateDefinition>({
 const app = workflow.compile()
 
 // Запускаем агента
-// const finalState = await app.invoke({});
-// console.log('>>>>>', finalState);
+const finalState = await app.invoke({keyword: {value: 'Кухни'}});
+console.log('>>>>>', finalState);
