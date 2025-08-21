@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Analyzer для Yandex</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #9333ea 100%);
+        }
+        .result-card {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        .keyword-tag {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+            40% { color: currentColor; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+            60% { text-shadow: .25em 0 0 currentColor, .5em 0 0 rgba(0,0,0,0); }
+            80%, 100% { text-shadow: .25em 0 0 currentColor, .5em 0 0 currentColor; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="gradient-bg text-white py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto text-center">
+        <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+            SEO Analyzer для Yandex
+        </h1>
+        <p class="mt-6 text-xl text-indigo-100 max-w-3xl mx-auto">
+            AI-анализ вашего сайта и рекомендации по продвижению в поисковой выдаче
+        </p>
+    </div>
+</div>
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 -mt-16">
+    <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+        <div class="p-6 sm:p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Анализ сайта</h2>
+
+            <div class="space-y-6">
+                <div>
+                    <label for="website-url" class="block text-sm font-medium text-gray-700 mb-1">URL вашего сайта</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-globe text-gray-400"></i>
+                        </div>
+                        <input type="url" id="website-url" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 py-3 sm:text-sm border-gray-300 rounded-md" placeholder="https://ваш-сайт.ru">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="keywords" class="block text-sm font-medium text-gray-700 mb-1">Ключевые слова (через запятую)</label>
+                    <textarea id="keywords" rows="3" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-3" placeholder="например: купить телефон, ремонт компьютеров, доставка еды"></textarea>
+                </div>
+
+                <div class="flex items-center">
+                    <input id="deep-analysis" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label for="deep-analysis" class="ml-2 block text-sm text-gray-700">Глубокий анализ (занимает больше времени)</label>
+                </div>
+
+                <div>
+                    <button id="analyze-btn" class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-search mr-2"></i> Проанализировать
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="results-container" class="mt-8 hidden">
+        <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+            <div class="p-6 sm:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Результаты анализа</h2>
+                    <button id="save-report" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-download mr-2"></i> Сохранить отчет
+                    </button>
+                </div>
+
+                <div id="loading" class="text-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
+                    <p class="mt-4 text-gray-600">Анализируем данные<span class="loading-dots"></span></p>
+                </div>
+
+                <div id="analysis-results" class="space-y-6 hidden">
+                    <div class="result-card bg-white p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-chart-line text-indigo-500 mr-2"></i> Общая статистика
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-indigo-50 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-indigo-700">Проанализировано ключевых слов</p>
+                                <p id="total-keywords" class="text-2xl font-bold text-gray-900 mt-1">12</p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-green-700">Средняя позиция в выдаче</p>
+                                <p id="avg-position" class="text-2xl font-bold text-gray-900 mt-1">8.4</p>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-purple-700">Конкурентоспособность</p>
+                                <p id="competitiveness" class="text-2xl font-bold text-gray-900 mt-1">Средняя</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-card bg-white p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-trophy text-yellow-500 mr-2"></i> Топ-ключевые слова
+                        </h3>
+                        <div id="top-keywords" class="flex flex-wrap">
+                            <!-- Keywords will be added here by JS -->
+                        </div>
+                    </div>
+
+                    <div class="result-card bg-white p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-lightbulb text-green-500 mr-2"></i> Рекомендации по SEO
+                        </h3>
+                        <div id="seo-recommendations" class="space-y-4">
+                            <!-- Recommendations will be added here by JS -->
+                        </div>
+                    </div>
+
+                    <div class="result-card bg-white p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-users text-blue-500 mr-2"></i> Анализ конкурентов
+                        </h3>
+                        <div id="competitors-analysis" class="space-y-4">
+                            <!-- Competitors analysis will be added here by JS -->
+                        </div>
+                    </div>
+
+                    <div class="result-card bg-white p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-file-alt text-red-500 mr-2"></i> Технические проблемы
+                        </h3>
+                        <div id="technical-issues" class="space-y-4">
+                            <!-- Technical issues will be added here by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-gray-100 mt-12 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <p class="text-center text-gray-500 text-sm">
+            &copy; 2023 SEO Analyzer для Yandex. Использует AI GigaChat для анализа SEO.
+        </p>
+    </div>
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultsContainer = document.getElementById('results-container');
+        const loadingElement = document.getElementById('loading');
+        const analysisResults = document.getElementById('analysis-results');
+        const saveReportBtn = document.getElementById('save-report');
+
+        analyzeBtn.addEventListener('click', function() {
+            const websiteUrl = document.getElementById('website-url').value;
+            const keywordsInput = document.getElementById('keywords').value;
+            const deepAnalysis = document.getElementById('deep-analysis').checked;
+
+            if (!websiteUrl || !keywordsInput) {
+                alert('Пожалуйста, заполните все обязательные поля');
+                return;
+            }
+
+            // Show results container and loading state
+            resultsContainer.classList.remove('hidden');
+            loadingElement.classList.remove('hidden');
+            analysisResults.classList.add('hidden');
+
+            // Simulate API call with timeout
+            setTimeout(function() {
+                // Hide loading and show results
+                loadingElement.classList.add('hidden');
+                analysisResults.classList.remove('hidden');
+
+                // Generate mock data for demo
+                generateMockData();
+            }, 3000);
+        });
+
+        saveReportBtn.addEventListener('click', function() {
+            alert('Отчет сохранен в формате PDF (это демо-версия)');
+        });
+
+        function generateMockData() {
+            const keywords = document.getElementById('keywords').value.split(',').map(k => k.trim());
+
+            // Update total keywords
+            document.getElementById('total-keywords').textContent = keywords.length;
+
+            // Generate random average position between 1 and 20
+            const avgPosition = (Math.random() * 20).toFixed(1);
+            document.getElementById('avg-position').textContent = avgPosition;
+
+            // Set competitiveness based on avg position
+            let competitiveness = '';
+            if (avgPosition < 5) {
+                competitiveness = 'Высокая';
+            } else if (avgPosition < 10) {
+                competitiveness = 'Средняя';
+            } else {
+                competitiveness = 'Низкая';
+            }
+            document.getElementById('competitiveness').textContent = competitiveness;
+
+            // Generate top keywords
+            const topKeywordsContainer = document.getElementById('top-keywords');
+            topKeywordsContainer.innerHTML = '';
+
+            // Take first 5 keywords or all if less than 5
+            const topKeywords = keywords.slice(0, 5);
+            topKeywords.forEach(keyword => {
+                // Random position for demo
+                const position = Math.floor(Math.random() * 20) + 1;
+
+                const keywordElement = document.createElement('div');
+                keywordElement.className = 'keyword-tag bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm';
+                keywordElement.innerHTML = `
+                        ${keyword} <span class="ml-1 font-bold">${position}</span>
+                    `;
+                topKeywordsContainer.appendChild(keywordElement);
+            });
+
+            // Generate SEO recommendations
+            const seoContainer = document.getElementById('seo-recommendations');
+            seoContainer.innerHTML = '';
+
+            const recommendations = [
+                'Увеличьте количество качественного контента на страницах, соответствующих ключевым словам.',
+                'Оптимизируйте мета-теги (title, description) для улучшения кликабельности в поисковой выдаче.',
+                'Улучшите внутреннюю перелинковку для равномерного распределения ссылочного веса.',
+                'Добавьте больше изображений с оптимизированными alt-атрибутами.',
+                'Ускорьте загрузку страниц, особенно для мобильных устройств.',
+                'Получите больше качественных внешних ссылок с тематических ресурсов.'
+            ];
+
+            recommendations.forEach(rec => {
+                const recElement = document.createElement('div');
+                recElement.className = 'flex items-start';
+                recElement.innerHTML = `
+                        <div class="flex-shrink-0 h-5 w-5 text-green-500 mt-0.5">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-gray-700">${rec}</p>
+                        </div>
+                    `;
+                seoContainer.appendChild(recElement);
+            });
+
+            // Generate competitors analysis
+            const competitorsContainer = document.getElementById('competitors-analysis');
+            competitorsContainer.innerHTML = '';
+
+            const competitors = [
+                { name: 'competitor1.ru', strength: 'Высокая', factors: ['Больше контента', 'Лучшие мета-теги', 'Больше внешних ссылок'] },
+                { name: 'competitor2.ru', strength: 'Средняя', factors: ['Лучшая структура сайта', 'Быстрее загрузка'] },
+                { name: 'competitor3.ru', strength: 'Низкая', factors: ['Меньше контента', 'Хуже техническая оптимизация'] }
+            ];
+
+            competitors.forEach(comp => {
+                const compElement = document.createElement('div');
+                compElement.className = 'bg-gray-50 p-4 rounded-lg';
+                compElement.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-medium text-gray-900">${comp.name}</h4>
+                            <span class="px-2 py-1 text-xs rounded-full ${comp.strength === 'Высокая' ? 'bg-red-100 text-red-800' : comp.strength === 'Средняя' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                ${comp.strength}
+                            </span>
+                        </div>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-600 mb-1">Основные преимущества:</p>
+                            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                ${comp.factors.map(f => `<li>${f}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                competitorsContainer.appendChild(compElement);
+            });
+
+            // Generate technical issues
+            const techIssuesContainer = document.getElementById('technical-issues');
+            techIssuesContainer.innerHTML = '';
+
+            const issues = [
+                { issue: 'Дубли мета-тегов', severity: 'Средняя', pages: '12 страниц' },
+                { issue: 'Медленная загрузка изображений', severity: 'Высокая', pages: '5 страниц' },
+                { issue: 'Ошибки 404', severity: 'Низкая', pages: '3 страницы' },
+                { issue: 'Проблемы с мобильной версией', severity: 'Высокая', pages: '8 страниц' }
+            ];
+
+            issues.forEach(issue => {
+                const issueElement = document.createElement('div');
+                issueElement.className = 'flex items-start';
+                issueElement.innerHTML = `
+                        <div class="flex-shrink-0 h-5 w-5 ${issue.severity === 'Высокая' ? 'text-red-500' : issue.severity === 'Средняя' ? 'text-yellow-500' : 'text-green-500'} mt-0.5">
+                            <i class="fas ${issue.severity === 'Высокая' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-900">${issue.issue}</p>
+                            <p class="text-sm text-gray-500">Серьезность: ${issue.severity} • ${issue.pages}</p>
+                        </div>
+                    `;
+                techIssuesContainer.appendChild(issueElement);
+            });
+        }
+    });
+</script>
+</body>
+</html>
