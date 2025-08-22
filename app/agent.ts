@@ -1,14 +1,14 @@
-import {END, START, StateGraph, StateGraphArgs} from '@langchain/langgraph';
-import {TavilySearch} from '@langchain/tavily';
-import {GigaChat} from 'langchain-gigachat';
-import {Agent} from 'node:https';
+import { END, START, StateGraph, StateGraphArgs } from '@langchain/langgraph';
+import { TavilySearch } from '@langchain/tavily';
+import { GigaChat } from 'langchain-gigachat';
+import { Agent } from 'node:https';
 
 interface SearchResult {
     url: string;
     title?: string;
     content?: string;
-    score?: number
-    raw_content?: string
+    score?: number;
+    raw_content?: string;
 }
 
 interface Results {
@@ -53,7 +53,7 @@ const findOurPosition = (results: SearchResult[], ourDomain: string): number => 
 };
 
 // определение состояния согласно документации LangGraphJS
-const stateDefinition: StateGraphArgs<MonitoringState>["channels"] = {
+const stateDefinition: StateGraphArgs<MonitoringState>['channels'] = {
     domain: {
         value: (prev: string | null, next: string | null) => next ?? prev,
         default: () => null,
@@ -87,14 +87,14 @@ const workflow = new StateGraph({
     .addNode('search', async (state: MonitoringState) => {
         try {
             if (!state.keyword) {
-                return {error: 'Keyword is required'};
+                return { error: 'Keyword is required' };
             }
             const results = await tavily.invoke({
                 query: state.keyword,
                 search_depth: 'advanced',
                 include_domains: ['yandex.ru'],
             });
-            return {searchResults: results};
+            return { searchResults: results };
         } catch (error) {
             return {
                 error: `Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -102,18 +102,18 @@ const workflow = new StateGraph({
         }
     })
     .addNode('analyze_position', async (state: MonitoringState) => {
-        const searchResults = state.searchResults!.results
-        if (state.error) return {error: state.error};
+        const searchResults = state.searchResults!.results;
+        if (state.error) return { error: state.error };
         if (!searchResults || searchResults.length === 0) {
-            return {error: 'No search results'};
+            return { error: 'No search results' };
         }
 
         try {
             if (!state.domain) {
-                return {error: 'domain is required'};
+                return { error: 'domain is required' };
             }
             const ourPosition = findOurPosition(searchResults, state.domain);
-            return {ourPosition};
+            return { ourPosition };
         } catch (error) {
             return {
                 error: `Position analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -121,11 +121,11 @@ const workflow = new StateGraph({
         }
     })
     .addNode('generate_recommendations', async (state: MonitoringState) => {
-        const findResults = state.searchResults?.results
-        if (state.error) return {error: state.error};
-        if (state.ourPosition === undefined) return {error: 'Position not calculated'};
+        const findResults = state.searchResults?.results;
+        if (state.error) return { error: state.error };
+        if (state.ourPosition === undefined) return { error: 'Position not calculated' };
         if (!findResults || findResults.length === 0) {
-            return {error: 'No search results'};
+            return { error: 'No search results' };
         }
 
         try {
@@ -138,16 +138,16 @@ const workflow = new StateGraph({
         Текущая позиция: ${positionText}
         Топ-5 результатов:
         ${findResults
-                .slice(0, 5)
-                .map((r, i) => `${i + 1}. ${r.title} (${r.url})`)
-                .join('\n')}
+            .slice(0, 5)
+            .map((r, i) => `${i + 1}. ${r.title} (${r.url})`)
+            .join('\n')}
         
         Дай рекомендации по улучшению позиций. Будь конкретен и предложи практические шаги.
         Оцени срочность и важность рекомендаций.
       `;
 
             const response = await gigachat.invoke(prompt);
-            return {analysis: response.text.toString()};
+            return { analysis: response.text.toString() };
         } catch (error) {
             return {
                 error: `GigaChat failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -193,14 +193,13 @@ const workflow = new StateGraph({
     .addEdge('generate_recommendations', 'save_results')
     .addEdge('save_results', END);
 
-
 // Экспортируем app для использования в API route
 export const app = workflow.compile();
 
 // Экспортируем тип для клиентской части
-export type {MonitoringState};
+export type { MonitoringState };
 
 // Экспортируем функцию для прямого вызова (опционально)
 export async function runSEOAnalysis(keyword: string, domain: string) {
-    return await app.invoke({keyword, domain});
+    return await app.invoke({ keyword, domain });
 }
