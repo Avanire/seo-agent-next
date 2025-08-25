@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import cn from 'classnames';
 
-import type { MonitoringState } from '../../../../app/agent';
 import SEOAnalysisForm from './SEOAnalysisForm';
+import { AgentMonitoringState } from '@/shared/types';
 
 const mainBgColor = cn('bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600');
 
 export default function Home() {
-    const [results, setResults] = useState<MonitoringState | null>(null);
+    const [results, setResults] = useState<AgentMonitoringState | null>(null);
     const [error, setError] = useState<string>('');
 
-    const handleAnalysisComplete = (data: MonitoringState) => {
+    const handleAnalysisComplete = (data: AgentMonitoringState) => {
         setResults(data);
         setError('');
     };

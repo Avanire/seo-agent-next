@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { app } from '../../agent';
+import { agent } from '@/shared/core/agent';
 
 export async function POST(request: Request) {
     if (request.method !== 'POST') {
@@ -7,13 +7,13 @@ export async function POST(request: Request) {
     }
 
     try {
-        const { keyword, domain } = await request.json();
+        const { keyword, domain, region } = await request.json();
 
         if (!keyword || !domain) {
             return NextResponse.json({ error: 'Keyword and domain are required' }, { status: 400 });
         }
 
-        const analysisResult = await app.invoke({ keyword, domain });
+        const analysisResult = await agent.invoke({ keyword, domain, region });
 
         return NextResponse.json(analysisResult);
     } catch (error) {
